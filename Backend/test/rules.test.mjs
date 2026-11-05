@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { shortestPath, applyAction, RailRoom } from '../src/worker.js';
+import worker, { shortestPath, applyAction, RailRoom } from '../src/worker.js';
 
 const board = {
   title: 'test', startNode: 0,
@@ -75,4 +75,32 @@ test('DO room creates and accepts authorized join', async () => {
     method:'POST',body:JSON.stringify({token:first.token,action:'start'})
   }));
   assert.equal((await start.json()).snapshot.phase,'ready');
+});
+
+test('public HTTP endpoints route room creation and state correctly', async () => {
+  const rooms=new Map();
+  const env={ ROOMS: {
+    idFromName: code=>code,
+    get: code=>{
+      if(!rooms.has(code)) {
+        const storage=new Map();
+        const obj=new RailRoom({storage:{get:async k=>storage.get(k),put:async(k,v)=>storage.set(k,v)}});
+        rooms.set(code,obj);
+      }
+      return rooms.get(code);
+    }
+  }};
+  const create=await worker.fetch(new Request('https://railtrip.test/rooms', {
+    method:'POST',headers:{'Content-Type':'application/json'},
+    body:JSON.stringify({name:'Host',board})
+  }),env);
+  assert.equal(create.status,200);
+  const first=await create.json();
+  assert.match(first.code,/^[A-Z2-9]{6}$/);
+  assert.equal(first.snapshot.players.length,1);
+  const get=await worker.fetch(new Request('https://railtrip.test/rooms/'+first.code+'/state'),env);
+  assert.equal(get.status,200);
+  assert.equal((await get.json()).version,1);
+  const options=await worker.fetch(new Request('https://railtrip.test/rooms', {method:'OPTIONS'}),env);
+  assert.equal(options.status,204);
 });
