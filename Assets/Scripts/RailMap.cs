@@ -13,6 +13,7 @@ namespace RailTrip3D
         public string name = "";
         public TileKind kind;
         public int price = 200, income = 40, owner = -1;
+        public bool overWater; // True: suspended rail tile, without a land patch beneath.
     }
     [Serializable] public class RailEdge { public int a, b; public RailEdge(int aa, int bb) { a = aa; b = bb; } }
     [Serializable] public class RailMap

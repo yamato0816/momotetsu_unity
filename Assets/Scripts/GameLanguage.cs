@@ -24,7 +24,8 @@ namespace RailTrip3D
             ["Nagasaki"]="長崎",["Niigata"]="新潟",["Nagano"]="長野",
             ["Toyama"]="富山",["Kanazawa"]="金沢",["Fukui"]="福井",
             ["Tottori"]="鳥取",["Matsue"]="松江",["Takamatsu"]="高松",
-            ["Tokushima"]="徳島",["Kochi"]="高知",["Matsuyama"]="松山"
+            ["Tokushima"]="徳島",["Kochi"]="高知",["Matsuyama"]="松山",
+            ["Naha"]="那覇",["Miyakojima"]="宮古島",["Ishigaki"]="石垣"
         };
         public static Font JapaneseFont
         {

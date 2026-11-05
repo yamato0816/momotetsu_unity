@@ -68,6 +68,9 @@ namespace RailTrip3D
             Add(8, 11, "Kumamoto", TileKind.Bonus);
             Add(7, 7, "Kagoshima", TileKind.Property, 360, 80);
             Add(6, 13, "Nagasaki", TileKind.Card);
+            Add(0, 0, "Naha", TileKind.Property, 440, 90);
+            Add(-5, -3, "Miyakojima", TileKind.Card);
+            Add(-8, -5, "Ishigaki", TileKind.Property, 330, 75);
             Add(27, 24, "Niigata", TileKind.Property, 300, 75);
             Add(26, 22, "Nagano", TileKind.Station);
             Add(25, 20, "Toyama", TileKind.Card);
@@ -89,8 +92,13 @@ namespace RailTrip3D
             Chain("Fukushima", "Niigata", "Nagano", "Toyama", "Kanazawa", "Fukui", "Kyoto");
             Chain("Fukui", "Tottori", "Matsue", "Hiroshima");
             Chain("Fukuoka", "Nagasaki");
+            Chain("Kagoshima", "Naha", "Miyakojima", "Ishigaki");
             Chain("Okayama", "Takamatsu", "Tokushima");
             Chain("Takamatsu", "Matsuyama", "Kochi", "Tokushima");
+            // Offshore grid segments are little bridges over turquoise water, as on the islands.
+            foreach(var n in m.nodes)
+                if (n.x <= 4 && n.z <= 5 && string.IsNullOrEmpty(n.name))
+                    n.overWater = true;
             // Mark non-city squares with game events so the route is lively.
             for (int i = 0; i < m.nodes.Count; i++)
             {

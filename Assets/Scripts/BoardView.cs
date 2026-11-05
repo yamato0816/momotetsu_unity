@@ -94,7 +94,8 @@ namespace RailTrip3D
             // Add shore/terrain around towns; rail corridors remain connected while
             // exposed overseas tracks become bridges. No external map texture.
             var land = new HashSet<Vector2Int>();
-            foreach (var n in map.nodes) land.Add(new Vector2Int(n.x, n.z));
+            foreach (var n in map.nodes)
+                if (!n.overWater) land.Add(new Vector2Int(n.x, n.z));
             foreach (var n in map.nodes.Where(n => !string.IsNullOrWhiteSpace(n.name)))
                 for (int dx = -2; dx <= 2; dx++)
                     for (int dz = -2; dz <= 2; dz++)

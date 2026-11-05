@@ -208,11 +208,13 @@ namespace RailTrip3D.Editor
             TileKind kind = (TileKind)EditorGUILayout.EnumPopup("Tile kind", chosen.kind);
             int price = EditorGUILayout.IntField("Property price", chosen.price);
             int income = EditorGUILayout.IntField("Income / round", chosen.income);
+            bool waterRail = EditorGUILayout.Toggle("Water / bridge square",chosen.overWater);
             if (EditorGUI.EndChangeCheck())
             {
                 Undo.RecordObject(asset, "Edit node");
                 chosen.name = name; chosen.kind = kind;
                 chosen.price = Mathf.Max(0, price); chosen.income = Mathf.Max(0, income);
+                chosen.overWater = waterRail;
                 EditorUtility.SetDirty(asset);
             }
             using (new EditorGUILayout.HorizontalScope())
