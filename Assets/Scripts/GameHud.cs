@@ -77,10 +77,30 @@ namespace RailTrip3D
             if (displayFont != null) style.font = displayFont;
             return style;
         }
+        private string L(string ja,string en) => displayFont != null ? ja : en;
         private void PrepareStyles()
         {
             if (built) return;
-            displayFont = Resources.Load<Font>("Fonts/GameUIFont"); // optional Japanese-capable font
+            displayFont = Resources.Load<Font>("Fonts/GameUIFont"); // add this font for WebGL Japanese
+#if !UNITY_WEBGL
+            // In desktop Editor, try installed Japanese system fonts without redistributing them.
+            if (displayFont == null)
+            {
+                foreach (string candidate in new[] { "Yu Gothic", "Meiryo", "Noto Sans CJK JP" })
+                {
+                    try
+                    {
+                        if (Array.Exists(Font.GetOSInstalledFontNames(), n =>
+                            n.IndexOf(candidate,StringComparison.OrdinalIgnoreCase) >= 0))
+                        {
+                            displayFont=Font.CreateDynamicFontFromOSFont(candidate,22);
+                            if(displayFont!=null)break;
+                        }
+                    }
+                    catch (Exception) { /* Desktop fallback remains in English. */ }
+                }
+            }
+#endif
             coral = Panel(coralColor);
             cream = Panel(new Color(.99f,.97f,.85f,.96f));
             dark = Panel(new Color(.06f,.18f,.23f,.94f));
@@ -151,31 +171,31 @@ namespace RailTrip3D
             // The top of the world is deliberately left mostly unobstructed.
             GUI.Box(new Rect(22,17,605,83),"",coral);
             Fill(new Rect(38,31,7,54),BoardView.PlayerColors[seat]);
-            Text(new Rect(60,23,320,28),me.name.ToUpperInvariant()+"  /  PRESIDENT",heading);
-            Text(new Rect(60,62,250,26),"ROUND "+(s.turnCount/Mathf.Max(1,s.players.Count)+1),small);
-            Text(new Rect(331,30,274,55),me.cash.ToString("N0")+" M",money);
-            if (B(new Rect(486,102,138,37),"PLAYERS",btn)) showPlayers=!showPlayers;
+            Text(new Rect(60,23,320,28),me.name.ToUpperInvariant()+"  /  "+L("社長","PRESIDENT"),heading);
+            Text(new Rect(60,62,250,26),L("第","ROUND ")+(s.turnCount/Mathf.Max(1,s.players.Count)+1)+L("ターン",""),small);
+            Text(new Rect(331,30,274,55),me.cash.ToString("N0")+L("万円"," M"),money);
+            if (B(new Rect(486,102,138,37),L("みんなの成績","PLAYERS"),btn)) showPlayers=!showPlayers;
 
             GUI.Box(new Rect(894,16,363,113),"",cream);
-            Text(new Rect(912,25,328,22),"NEXT DESTINATION",Txt(16,new Color(.40f,.42f,.36f),FontStyle.Bold));
+            Text(new Rect(912,25,328,22),L("目的地","NEXT DESTINATION"),Txt(16,new Color(.40f,.42f,.36f),FontStyle.Bold));
             string dest = s.started && app.boardView.Graph.nodes.ContainsKey(s.destination)
                 ? app.boardView.Graph.nodes[s.destination].name.ToUpperInvariant() : "WAITING";
             Text(new Rect(913,50,314,40),dest,value);
             int distance = s.started
                 ? app.boardView.Graph.Distance(s.players[s.currentSeat].nodeId,s.destination) : 0;
             Text(new Rect(925,100,308,23),
-                s.started && distance < int.MaxValue ? distance+" TILES BY SHORTEST RAIL" : "READY",
+                s.started && distance < int.MaxValue ? L("あと ","")+distance+L(" マス"," TILES BY SHORTEST RAIL") : L("準備中","READY"),
                 Txt(16,new Color(.32f,.37f,.35f),FontStyle.Bold,TextAnchor.MiddleCenter));
 
             if (app.dice != null && app.dice.IsRolling)
             {
                 GUI.Box(new Rect(971,144,271,54),"",cream);
-                Text(new Rect(985,154,242,32),"ROLLING...",darkHeading);
+                Text(new Rect(985,154,242,32),L("サイコロ中…","ROLLING..."),darkHeading);
             }
             else if (s.phase=="moving")
             {
                 GUI.Box(new Rect(966,142,280,64),"",cream);
-                Text(new Rect(984,155,244,40),"STEPS LEFT  "+s.remaining,
+                Text(new Rect(984,155,244,40),L("のこり ","STEPS LEFT  ")+s.remaining+L(" マス",""),
                     Txt(27,new Color(.24f,.32f,.32f),FontStyle.Bold,TextAnchor.MiddleCenter));
             }
             if (!string.IsNullOrEmpty(app.network.lastError))
@@ -196,22 +216,22 @@ namespace RailTrip3D
             GUI.Box(new Rect(203,y,876,h),"",modal);
             if (wait)
             {
-                string title = s.phase=="buy" ? "PROPERTY STATION" :
-                    s.phase=="finished" ? "MATCH COMPLETE" : "WAITING ROOM";
+                string title = s.phase=="buy" ? L("物件駅","PROPERTY STATION") :
+                    s.phase=="finished" ? L("ゲーム終了","MATCH COMPLETE") : L("参加待ち","WAITING ROOM");
                 Text(new Rect(229,y+8,803,34),title,darkHeading);
                 Text(new Rect(229,y+51,807,37),s.message,blackText);
                 if (s.phase=="buy" && app.MyTurn)
                 {
                     bool lockInput = app.ControlsLocked;
                     GUI.enabled=!lockInput;
-                    if(B(new Rect(246,y+98,348,52),"PURCHASE",primary)) app.Request("buy");
-                    if(B(new Rect(616,y+98,348,52),"PASS",btn)) app.Request("skip");
+                    if(B(new Rect(246,y+98,348,52),L("買う","PURCHASE"),primary)) app.Request("buy");
+                    if(B(new Rect(616,y+98,348,52),L("買わない","PASS"),btn)) app.Request("skip");
                     GUI.enabled=true;
                 }
                 if (s.phase=="finished" &&
-                    B(new Rect(720,y+99,295,50),"NEW LOCAL GAME",primary)) app.StartOffline();
+                    B(new Rect(720,y+99,295,50),L("もう一度遊ぶ","NEW LOCAL GAME"),primary)) app.StartOffline();
                 if (!s.started && app.isOnline && app.network.seat==0 && 
-                    B(new Rect(680,y+99,330,50),"START MATCH",primary)) app.Request("start");
+                    B(new Rect(680,y+99,330,50),L("ゲーム開始","START MATCH"),primary)) app.Request("start");
             }
             else
             {
@@ -226,26 +246,26 @@ namespace RailTrip3D
             // Four primary actions are enough; no permanent scorecard or giant map panel.
             bool usable = app.MyTurn && !app.ControlsLocked && !showMiniMap && !onlineMenu;
             GUI.enabled=!onlineMenu && !showMiniMap;
-            if(B(new Rect(33,649,195,49),showCards ? "CLOSE CARDS" : "CARDS",btn))
+            if(B(new Rect(33,649,195,49),showCards ? L("閉じる","CLOSE CARDS") : L("カード","CARDS"),btn))
             { showCards=!showCards; showPlayers=false; }
             GUI.enabled=usable;
             if(app.dice.IsRolling)
             {
                 GUI.enabled=false;
-                B(new Rect(246,648,493,51),"DICE ROLLING...",btn);
+                B(new Rect(246,648,493,51),L("サイコロを振っています…","DICE ROLLING..."),btn);
                 GUI.enabled=usable;
             }
             else if(s.started && s.phase=="ready")
             {
-                if(B(new Rect(246,648,493,51),"ROLL THE DICE  ●",primary))
+                if(B(new Rect(246,648,493,51),L("サイコロをふる","ROLL THE DICE  ●"),primary))
                 { showCards=false; app.Request("roll"); }
             }
             else if(s.started && s.phase=="moving")
             {
-                Direction(new Rect(249,649,116,49),"LEFT",-1,0);
-                Direction(new Rect(371,649,116,49),"UP",0,1);
-                Direction(new Rect(493,649,116,49),"DOWN",0,-1);
-                Direction(new Rect(615,649,116,49),"RIGHT",1,0);
+                Direction(new Rect(249,649,116,49),L("← 左","LEFT"),-1,0);
+                Direction(new Rect(371,649,116,49),L("↑ 上","UP"),0,1);
+                Direction(new Rect(493,649,116,49),L("↓ 下","DOWN"),0,-1);
+                Direction(new Rect(615,649,116,49),L("→ 右","RIGHT"),1,0);
             }
             else
             {
@@ -254,9 +274,9 @@ namespace RailTrip3D
                     app.dice.IsRolling ? "ROLLING..." : s.phase=="finished" ? "GAME OVER" : "WAIT YOUR TURN",btn);
             }
             GUI.enabled=!onlineMenu;
-            if(B(new Rect(759,649,239,49),showMiniMap ? "CLOSE MAP" : "FULL MAP  +",btn))
+            if(B(new Rect(759,649,239,49),showMiniMap ? L("地図を閉じる","CLOSE MAP") : L("全体マップ","FULL MAP  +"),btn))
             { showMiniMap=!showMiniMap; showCards=false; showPlayers=false; }
-            if(B(new Rect(1010,649,235,49),"GAME MENU",btn))
+            if(B(new Rect(1010,649,235,49),L("メニュー","GAME MENU"),btn))
                 onlineMenu = true;
             GUI.enabled=true;
         }
@@ -278,8 +298,8 @@ namespace RailTrip3D
             var s = app.match;
             var player=s.players[Mathf.Clamp(app.MySeat,0,s.players.Count-1)];
             GUI.Box(new Rect(26,382,368,248),"",dark);
-            Text(new Rect(48,393,320,38),"YOUR CARDS",heading);
-            Text(new Rect(48,434,315,23),"Use a card before rolling.",small);
+            Text(new Rect(48,393,320,38),L("カード","YOUR CARDS"),heading);
+            Text(new Rect(48,434,315,23),L("サイコロを振る前に使えます","Use a card before rolling."),small);
             for(int i=0;i<3;i++)
             {
                 string name=i<player.cards.Count ? CardLabel(player.cards[i]) : "-- EMPTY --";
@@ -306,7 +326,7 @@ namespace RailTrip3D
             var s=app.match;
             float h=72+s.players.Count*63;
             GUI.Box(new Rect(23,146,410,h),"",dark);
-            Text(new Rect(43,160,367,32),"PLAYER RANKING",heading);
+            Text(new Rect(43,160,367,32),L("プレイヤーの成績","PLAYER RANKING"),heading);
             for(int i=0;i<s.players.Count;i++)
             {
                 int seat=i;
@@ -333,8 +353,8 @@ namespace RailTrip3D
             var graph=app.boardView.Graph;
             Fill(new Rect(0,0,1280,720),new Color(.02f,.07f,.09f,.87f));
             GUI.Box(new Rect(80,35,1120,596),"",cream);
-            Text(new Rect(116,54,700,48),"RAIL NETWORK  /  ROUTE OVERVIEW",darkHeading);
-            if(B(new Rect(1017,53,142,48),"CLOSE",btn)) { showMiniMap=false; return; }
+            Text(new Rect(116,54,700,48),L("全体マップ / 路線図","RAIL NETWORK  /  ROUTE OVERVIEW"),darkHeading);
+            if(B(new Rect(1017,53,142,48),L("閉じる","CLOSE"),btn)) { showMiniMap=false; return; }
             Rect area=new Rect(110,116,1048,442);
             Fill(area,new Color(.09f,.48f,.58f,.94f));
             int minX=graph.map.nodes.Min(n=>n.x), maxX=graph.map.nodes.Max(n=>n.x);
@@ -377,30 +397,30 @@ namespace RailTrip3D
                 Fill(new Rect(p.x-8+i*3,p.y-8+i*3,16,16),BoardView.PlayerColors[i]);
             }
             Text(new Rect(123,573,1002,30),
-                "GOLD = SHORTEST RAIL  /  STATION DOTS = PROPERTY & EVENTS  /  M = CLOSE",
+                L("黄色＝目的地への最短経路  /  Mキーで閉じる","GOLD = SHORTEST RAIL  /  STATION DOTS = PROPERTY & EVENTS  /  M = CLOSE"),
                 Txt(18,new Color(.23f,.31f,.32f),FontStyle.Bold));
         }
         private void DrawOnline()
         {
             Fill(new Rect(0,0,1280,720),new Color(.02f,.07f,.10f,.85f));
             GUI.Box(new Rect(252,83,776,562),"",modal);
-            Text(new Rect(292,111,676,52),"ONLINE / GAME MENU",darkHeading);
-            Text(new Rect(292,171,677,24),"CLOUDFLARE WORKER HTTPS ADDRESS",blackText);
+            Text(new Rect(292,111,676,52),L("オンライン / ゲーム設定","ONLINE / GAME MENU"),darkHeading);
+            Text(new Rect(292,171,677,24),L("通信サーバーのURL","CLOUDFLARE WORKER HTTPS ADDRESS"),blackText);
             if (endpoint=="" && app.network.serverUrl!="") endpoint=app.network.serverUrl;
             endpoint=GUI.TextField(new Rect(292,204,692,49),endpoint,200,textField);
-            if(B(new Rect(292,266,692,48),"SAVE SERVER",btn)) app.SaveEndpoint(endpoint);
-            Text(new Rect(292,331,490,24),"DISPLAY NAME",blackText);
+            if(B(new Rect(292,266,692,48),L("サーバーURLを保存","SAVE SERVER"),btn)) app.SaveEndpoint(endpoint);
+            Text(new Rect(292,331,490,24),L("プレイヤー名","DISPLAY NAME"),blackText);
             playerName=GUI.TextField(new Rect(292,360,692,48),playerName,16,textField);
-            if(B(new Rect(292,432,281,52),"CREATE ROOM",primary))
+            if(B(new Rect(292,432,281,52),L("部屋を作る","CREATE ROOM"),primary))
             { app.SaveEndpoint(endpoint); app.CreateOnline(playerName); }
             roomInput=GUI.TextField(new Rect(593,432,170,52),roomInput.ToUpperInvariant(),6,textField);
-            if(B(new Rect(781,432,203,52),"JOIN ROOM",btn))
+            if(B(new Rect(781,432,203,52),L("参加する","JOIN ROOM"),btn))
             { app.SaveEndpoint(endpoint); app.JoinOnline(roomInput,playerName); }
             Text(new Rect(292,495,684,46),!string.IsNullOrEmpty(app.network.lastError)
                 ? app.network.lastError : app.status,Txt(16,new Color(.31f,.35f,.35f)));
-            if(B(new Rect(292,561,335,53),"BACK TO THE BOARD",btn))
+            if(B(new Rect(292,561,335,53),L("盤面に戻る","BACK TO THE BOARD"),btn))
                 onlineMenu=false;
-            if(B(new Rect(645,561,339,53),"NEW LOCAL GAME",danger))
+            if(B(new Rect(645,561,339,53),L("CPU対戦を始める","NEW LOCAL GAME"),danger))
             { app.StartOffline(); showCards=false; showPlayers=false; showMiniMap=false; }
         }
     }
