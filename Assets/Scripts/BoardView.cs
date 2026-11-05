@@ -323,7 +323,7 @@ namespace RailTrip3D
             {
                 int i = trains.Count;
                 var train = CreateTrain(i);
-                train.position = NodePosition(state.players[i].nodeId)+Vector3.up*.56f;
+                train.position = NodePosition(state.players[i].nodeId)+Vector3.up*.26f;
                 trains.Add(train); priorTrainPositions.Add(train.position);
             }
             foreach (var tile in state.board.nodes)
@@ -352,7 +352,7 @@ namespace RailTrip3D
             for (int i=0;i<snapshot.players.Count && i<trains.Count;i++)
             {
                 Vector3 target = NodePosition(snapshot.players[i].nodeId)
-                    + new Vector3((i%2)*.24f-.12f,.61f,(i/2)*.23f-.11f);
+                    + new Vector3((i%2)*.24f-.12f,.26f,(i/2)*.23f-.11f);
                 Vector3 previous = trains[i].position;
                 trains[i].position = Vector3.MoveTowards(previous,target,Time.deltaTime*6.7f);
                 Vector3 movement = target-previous; movement.y = 0;
