@@ -21,6 +21,8 @@ namespace RailTrip3D
         private readonly List<Vector3> headings = new List<Vector3>();
         private readonly MaterialPropertyBlock block = new MaterialPropertyBlock();
         private Vector3 cameraFocus;
+        private Vector3 cameraOffset;
+        private bool hasCameraOffset;
         private int activeSeat;
         private bool initialized;
         public static readonly Color[] PlayerColors = {
@@ -63,6 +65,13 @@ namespace RailTrip3D
             }
             mapCamera = authored.followCamera;
             if(mapCamera == null) throw new InvalidOperationException("Follow Camera is missing from the Scene");
+            // The saved Camera Transform in Main.unity is editable by the developer.
+            // Read its authored offset only once, so restarting a match doesn't drift.
+            if(!hasCameraOffset)
+            {
+                cameraOffset=mapCamera.transform.position-NodePosition(authored.startNodeId);
+                hasCameraOffset=true;
+            }
             mapCamera.orthographic = true;
             mapCamera.orthographicSize = Mathf.Clamp(mapCamera.orthographicSize,4.7f,10f);
             if(authored.ghostMarker!=null) authored.ghostMarker.gameObject.SetActive(false);
@@ -151,7 +160,7 @@ namespace RailTrip3D
             Vector3 ahead=headings[activeSeat]*.82f;
             Vector3 wanted=current.position+ahead+new Vector3(0,.13f,.6f);
             cameraFocus=Vector3.Lerp(cameraFocus,wanted,1f-Mathf.Exp(-6.5f*Time.deltaTime));
-            Vector3 eye=cameraFocus+new Vector3(1.4f,10.5f,-10.7f);
+            Vector3 eye=cameraFocus+cameraOffset;
             mapCamera.transform.position=Vector3.Lerp(mapCamera.transform.position,
                 eye,1f-Mathf.Exp(-7.0f*Time.deltaTime));
             mapCamera.transform.LookAt(cameraFocus);
