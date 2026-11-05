@@ -23,11 +23,17 @@ namespace RailTrip3D
             if (labelText != null)
             {
                 labelText.text = GameLanguage.City(stationName);
-                if (GameLanguage.JapaneseFont != null)
+                Font font = GameLanguage.JapaneseFont;
+                if (font == null)
                 {
-                    labelText.font = GameLanguage.JapaneseFont;
+                    try { font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf"); }
+                    catch (System.Exception) { /* Missing fallback remains blank, not an error. */ }
+                }
+                if (font != null)
+                {
+                    labelText.font = font;
                     var renderer = labelText.GetComponent<MeshRenderer>();
-                    if (renderer != null) renderer.sharedMaterial = GameLanguage.JapaneseFont.material;
+                    if (renderer != null) renderer.sharedMaterial = font.material;
                 }
             }
         }
