@@ -1,51 +1,48 @@
-# Rail Trip 3D | Unity 6 鉄道すごろく
+# Rail Trip 3D — Unity 編集可能な鉄道すごろく
 
-日本列島をイメージした3D鉄道ボードゲーム。**WebGL対応のオンラインルーム**、ローカルCPU対戦、編集できる駅と線路、カードと物件、ゴールまでのBFS最短経路、貧乏神、ミニマップ、ドット絵スプライトを実装した独自プロトタイプです。
+Unity 6.3（Built-in Render Pipeline）用のオリジナル鉄道ボードゲームです。ローカルCPU対戦、Cloudflare Workersを利用するWebGL対応オンライン対戦、物件・カード・貧乏神・最短経路表示を備えています。
 
-## できること
-- 3D の駅・レール・列車と、2D SpriteRenderer による列車/カード/貧乏神/旗アイコン
-- 十字移動、サイコロ、行き戻り制限、目的地の最短経路（3D/簡略地図の双方でハイライト）
-- 通常駅・物件駅・カード駅・プラス/マイナス駅、物件購入と定期収益
-- 3種のカード（急行・現金・お守り）、貧乏神、ゴール報酬、資産による勝敗
-- YOU vs CPU 2人のオフライン対戦、および 1〜4人のオンラインルーム
-- Unity 上で駅、線路、価格、マス種類を編集可能な \`RailMapAsset\` と専用編集画面
+## 重要：マップは Scene 内に実物として保存済み
 
-## 起動
-Unity 6.3 以降でルートを開く → 初回コンパイル後に \`Assets/Scenes/Main.unity\` を開いて Play。
+**[Assets/Scenes/Main.unity](Assets/Scenes/Main.unity)** に **131個の駅・線路マス / 133本の線路オブジェクト**、地形、建物、木、車両4台、3Dサイコロ、目的地マーカーを配置済みです。モデルはHierarchyに存在し、**Play時に駅・線路・地形を生成しません**。
 
-- **操作**: Space（サイコロ）、矢印/WASD（十字移動）、1/2/3（カード）、M（簡易地図）、マウスホイール（ズーム）
-- **マップ編集**: \`Rail Trip > Edit Map\`
-- **オンライン / WebGL**: \`Backend\` の Cloudflare Worker をデプロイしてゲームの ONLINE 画面にURLを設定
-- **WebGLビルド**: \`Rail Trip > Build WebGL\`
+- [Scene編集と起動の日本語ガイド](docs/SETUP_JA.md)
+- [Unity用スクリプト](Assets/Scripts)
+- [Editor用Scene作成・編集ツール](Assets/Editor/EditableSceneBaker.cs)
+- [オンラインサーバー](Backend/src/worker.js)
 
-詳しい説明・注意点: **[日本語セットアップガイド](docs/SETUP_JA.md)**
+### 起動する
 
-## 重要
-リポジトリへのコード追加は完了していますが、**Unity実機でのビルドと Cloudflare への公開は未実施**です。オンライン対戦の実利用には自分の Cloudflare アカウントによる Worker デプロイが必要です。デザイン・名称・ピクセルアートはオリジナルで、他社ゲームの著作物は含めていません。
+1. `git clone https://github.com/yamato0816/momotetsu_unity.git` または既存フォルダで `git pull`。
+2. Unity Hubでリポジトリのルートを **Unity 6.3** で開く。
+3. **`Assets/Scenes/Main.unity`** を開き、Hierarchyの駅・線路・土地を確認。
+4. PlayでYOU対CPU2人のゲーム開始。Spaceでサイコロ、矢印/WASDで十字移動、Mで全体マップ。
+5. **`Rail Trip > Edit Map`**（Ctrl/Cmd+Shift+M）から編集可能なSceneを開けます。
 
-## 画面・マップを参考画像に近づけた新版
+### Unity上で直接編集する
 
-- **斜め見下ろしの追尾カメラ**：常時全体図を映すのではなく、現在のプレイヤーの列車を追います。マウスホイールで寄り引きを調整。
-- **3D ジオラマ**：明るい海・海岸・芝生、白黒の鉄道枕木、色付き駅マス、町の家や屋根、樹木、列車をコード生成。駅名は視界の近くのみ白い看板で表示。
-- **すっきりしたUI**：所持金は左上、目的地は右上、サイコロと移動は下部。物件購入・イベントだけ下部に会話枠が出ます。カード・成績表・路線全体図はボタンで開閉。
-- **物理風のサイコロ演出**：立体のサイコロが回り、跳ねて、確定した出目で止まります。通信版でも実際のサイコロ結果はゲームサーバー側で確定します。
-- **島・海上ルート**：鹿児島～那覇～宮古島～石垣島の見本ルートを追加。海上のレールは陸地パッチを消して橋のように表示できます。
-- **日本語表示**：Windows/macOSのUnity Editorで利用できる日本語対応システムフォントを使うか、`Assets/Resources/Fonts/GameUIFont` にフォントアセットを設置すると、日本語のHUDと主な駅名を表示します。**フォントを同梱していないWebGL版は英語フォールバック**になります。
-
-### 編集と操作
-
-| 操作 | 動作 |
+| Hierarchy | 編集できるもの |
 | --- | --- |
-| `Space` / サイコロボタン | サイコロを振る。アニメーション中は移動不可 |
-| `↑ ↓ ← →` / WASD / 下部ボタン | 次の線路マスへ十字移動 |
-| `M` / 全体マップ | 路線図を表示・閉じる。常時表示しない |
-| カード | 手札3枚から利用 |
-| `Rail Trip > Edit Map` | 駅・価格・接続・海上マス編集 |
-| `Rail Trip > Reset to Sample Japan Map` | 初期マップを新版に戻す（現在の編集は上書きされるため注意） |
+| `01_LAND_AND_WATER` | 海・島・地形のCube |
+| `02_TRACKS` | 線路1本ずつ（白い路盤・黒い枕木・銀色のレール・最短経路表示） |
+| `03_STATIONS` | 駅を選択してTransformを移動。`SceneRailNode` Inspectorから駅名/価格/収益/種別を編集 |
+| `FLAT NAMEPLATE` | 駅マスの上下に貼り付く名前札。位置・文字を編集 |
+| `04_TREES_AND_BUILDINGS` | 建物・屋根・樹木をSceneで直接移動・変更 |
+| `05_TRAINS_DICE_AND_MARKERS` | 列車4台、貧乏神、目的地旗、サイコロ |
+| `FOLLOW CAMERA` | 近距離斜め見下ろしカメラ（初期Orthographic Size 6.1） |
 
-### 重要な注意
+マップはSceneから自動で読まれます。駅オブジェクトを移動したら `Rail Trip > 08 Snap Station Roots to Grid` → `Rail Trip > 05 Refresh Saved Rail Geometry` → Scene保存（Ctrl/Cmd+S）。線路接続を増やすには隣接駅2つを選択して `Rail Trip > 06 Link Selected Stations`。削除後はIDの振り直しが必要になることがあります。
 
-- Unity エディタでの**実機プレイやWebGLのレンダリング確認は未実施**です。C# 構文検査とサーバー側の自動テストは GitHub Actions で実行しています。
-- このプロジェクトは、鉄道すごろくゲームの雰囲気を参考に制作した**独自のプロトタイプ**です。既存商用ゲームのUI画像・キャラクターモデル・音楽・背景データは使用していません。
-- サンプルの地形は**概略ジオラマ**で、国土地理院地図などの実際の地理情報とは一致しません。ボードの路線はUnity編集画面から変更できます。
+**重要:** `Rail Trip > 02 Rebuild Editable Scene from Map Asset` は現在のSceneを丸ごと置き換えます。普段の編集では押さないでください。
 
+### オンラインとWebGL
+
+`cd Backend && npm install && npm test && npx wrangler login && npm run deploy` を実行し、表示されたHTTPS Workers URLをゲームのONLINE設定に入力。部屋コードで最大4人参加できます。WebGL Build SupportをUnity Hubに入れて `Rail Trip > Build WebGL` を実行。
+
+**オンラインでは全参加者が同じSceneの駅配置・線路データを持つ必要があります。**違うSceneだとマップ不一致エラーを表示します。
+
+### 検証範囲
+
+GitHub Actionsでサーバーのルールテスト、C#構文検査、Sceneに保存された駅・線路・モデル参照・経路接続の検査を実行します。Unity Editorでの実際のインポート・コンパイル・描画、およびWebGLビルド・公開はこのチャットからは未実施です。問題があればUnity Consoleを確認してください。
+
+第三者の商用ゲームの素材をそのまま配布せず、オリジナルの簡易モデルとゲームロジックを利用しています。
