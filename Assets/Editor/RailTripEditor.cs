@@ -29,10 +29,14 @@ namespace RailTrip3D.Editor
                 AssetDatabase.CreateAsset(map, MapPath);
                 created = true;
             }
-            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(ScenePath) == null)
+            // Bake once into a real .unity scene on first import. Existing authored
+            // scene objects are NEVER overwritten by Play or script recompilation.
+            bool noScene = !File.Exists(ScenePath);
+            bool legacyBlankScene = !noScene && !File.ReadAllText(ScenePath).Contains("--- !u!1 &");
+            if (noScene || legacyBlankScene)
             {
-                var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
-                EditorSceneManager.SaveScene(scene, ScenePath);
+                var asset = AssetDatabase.LoadAssetAtPath<RailMapAsset>(MapPath);
+                EditableSceneBaker.Bake(asset != null ? asset.RuntimeCopy() : SampleMap.Create());
                 created = true;
             }
             bool listed = EditorBuildSettings.scenes.Any(s => s.path == ScenePath && s.enabled);
@@ -45,7 +49,7 @@ namespace RailTrip3D.Editor
             {
                 AssetDatabase.SaveAssets();
                 AssetDatabase.Refresh();
-                Debug.Log("Rail Trip 3D ready: open Assets/Scenes/Main.unity, press Play, or choose Rail Trip > Edit Map");
+                Debug.Log("Rail Trip 3D ready: Scene is saved and editable. Open Assets/Scenes/Main.unity and move stations in the Scene view.");
             }
         }
     }
