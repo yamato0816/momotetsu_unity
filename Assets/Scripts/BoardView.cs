@@ -43,6 +43,12 @@ namespace RailTrip3D
         private static readonly Color Slate = new Color(.23f,.28f,.34f);
         private static readonly Color Route = new Color(1f,.82f,.21f);
         public RailGraph Graph => graph;
+        public bool ShowShortestRoute { get; private set; }
+        public void ToggleShortestRoute()
+        {
+            ShowShortestRoute = !ShowShortestRoute;
+            if (snapshot != null) Show(snapshot);
+        }
 
         private Material Mat(Color color)
         {
@@ -398,7 +404,7 @@ namespace RailTrip3D
                         ? PlayerColors[Mathf.Clamp(tile.owner,0,PlayerColors.Length-1)]
                         : StopColor(tile));
             var shortest = new HashSet<long>();
-            if (state.started && state.players.Count > activeSeat)
+            if (ShowShortestRoute && state.started && state.players.Count > activeSeat)
             {
                 var path = graph.ShortestPath(state.players[activeSeat].nodeId,state.destination);
                 for(int i=1;i<path.Count;i++) shortest.Add(Key(path[i-1],path[i]));

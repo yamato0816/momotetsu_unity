@@ -257,7 +257,9 @@ namespace RailTrip3D
             GUI.enabled=!onlineMenu;
             if(B(new Rect(759,649,239,49),showMiniMap ? L("地図を閉じる","CLOSE MAP") : L("全体マップ","FULL MAP  +"),btn))
             { showMiniMap=!showMiniMap; showCards=false; showPlayers=false; }
-            if(B(new Rect(1010,649,235,49),L("メニュー","GAME MENU"),btn))
+            if(B(new Rect(1007,649,135,49),app.boardView.ShowShortestRoute ? L("経路を消す","HIDE ROUTE") : L("最短ルート","ROUTE"),btn))
+                app.boardView.ToggleShortestRoute();
+            if(B(new Rect(1150,649,96,49),L("設定","MENU"),btn))
                 onlineMenu = true;
             GUI.enabled=true;
         }
