@@ -151,7 +151,8 @@ export function applyAction(state, seat, action, node = -1, card = -1) {
   if (!state.started || state.phase === 'finished' || seat !== state.currentSeat) return false;
   const player = state.players[seat];
   if (action === 'roll' && state.phase === 'ready') {
-    state.rolled = pick(6) + 1 + player.diceBoost;
+    state.dieFace = pick(6) + 1;
+    state.rolled = state.dieFace + player.diceBoost;
     player.diceBoost = 0; state.remaining = state.rolled; state.previousNode = -1;
     state.phase = 'moving'; state.message = player.name + ' rolled ' + state.rolled;
     return true;
@@ -214,7 +215,7 @@ export class RailRoom {
           match: {
             board, players: [player(input.name, board.startNode)], room: code,
             phase: 'lobby', message: 'Waiting for players', currentSeat: 0,
-            destination: board.startNode, ghostSeat: -1, remaining: 0, rolled: 0,
+            destination: board.startNode, ghostSeat: -1, remaining: 0, rolled: 0, dieFace: 0,
             previousNode: -1, turnCount: 0, reachedGoals: 0, winnerSeat: -1, started: false
           }
         };

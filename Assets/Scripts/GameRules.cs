@@ -16,7 +16,7 @@ namespace RailTrip3D
         public RailMap board;
         public List<PlayerData> players = new List<PlayerData>();
         public string phase = "lobby", message = "Waiting for players", room = "";
-        public int currentSeat, destination, ghostSeat = -1, remaining, rolled, previousNode = -1;
+        public int currentSeat, destination, ghostSeat = -1, remaining, rolled, dieFace, previousNode = -1;
         public int turnCount, reachedGoals, winnerSeat = -1;
         public bool started;
     }
@@ -53,7 +53,8 @@ namespace RailTrip3D
             {
                 case "roll":
                     if (s.phase != "ready") return false;
-                    s.rolled = UnityEngine.Random.Range(1, 7) + p.diceBoost;
+                    s.dieFace = UnityEngine.Random.Range(1, 7);
+                    s.rolled = s.dieFace + p.diceBoost;
                     p.diceBoost = 0; s.remaining = s.rolled; s.previousNode = -1;
                     s.phase = "moving"; s.message = p.name + " rolled " + s.rolled; return true;
                 case "move":

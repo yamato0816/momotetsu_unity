@@ -74,8 +74,8 @@ namespace RailTrip3D
             {
                 case 1: return Quaternion.identity;
                 case 2: return Quaternion.Euler(-90,0,0);
-                case 3: return Quaternion.Euler(0,0,-90);
-                case 4: return Quaternion.Euler(0,0,90);
+                case 3: return Quaternion.Euler(0,0,90);
+                case 4: return Quaternion.Euler(0,0,-90);
                 case 5: return Quaternion.Euler(90,0,0);
                 default: return Quaternion.Euler(0,0,180);
             }

@@ -10,6 +10,7 @@ namespace RailTrip3D
         public BoardView boardView;
         public OnlineClient network;
         public GameHud hud;
+        public DiceRollView dice;
         public MatchData match;
         public bool isOnline;
         public string status = "";
@@ -36,6 +37,7 @@ namespace RailTrip3D
             catch (System.Exception ex) { Debug.LogError(ex); configuredMap = SampleMap.Create(); }
             boardView = gameObject.AddComponent<BoardView>();
             network = gameObject.AddComponent<OnlineClient>();
+            dice = gameObject.AddComponent<DiceRollView>();
             hud = gameObject.AddComponent<GameHud>();
             hud.app = this;
             network.serverUrl = PlayerPrefs.GetString("railtrip_server", "");
@@ -45,6 +47,7 @@ namespace RailTrip3D
         public void StartOffline()
         {
             network.Disconnect();
+            dice.Cancel();
             isOnline = false; pendingCreateOrJoin = false;
             match = GameRules.NewMatch(configuredMap, "YOU", "CPU RIN", "CPU KAI");
             GameRules.Apply(match, 0, "start");
@@ -79,25 +82,36 @@ namespace RailTrip3D
             if (state == null || state.board == null) return;
             if (!isOnline || match == null || match.board.nodes.Count != state.board.nodes.Count)
                 boardView.Build(state.board);
+            bool animateRoll = isOnline && match != null && match.phase == "ready" &&
+                state.phase == "moving" && state.currentSeat == match.currentSeat && state.rolled > 0;
             isOnline = true;
             pendingCreateOrJoin = false;
             match = state;
             boardView.Show(match);
+            if (animateRoll) dice.Play(match.dieFace > 0 ? match.dieFace : Mathf.Clamp(match.rolled, 1, 6),
+                boardView.NodePosition(match.players[match.currentSeat].nodeId));
             hud.onlineMenu = false;
             status = "Online room " + network.roomCode;
         }
         public int MySeat => isOnline ? network.seat : 0;
         public bool MyTurn => match != null && match.started && match.currentSeat == MySeat && match.phase != "finished";
+        public bool ControlsLocked => dice.IsRolling || (isOnline && network.busy);
         public void Request(string action, int node = -1, int card = -1)
         {
-            if (match == null) return;
+            if (match == null || ControlsLocked) return;
             if (isOnline) { network.Act(action, node, card); return; }
+            string before = match.phase;
             bool changed = GameRules.Apply(match, 0, action, node, card);
-            if (changed) boardView.Show(match);
+            if (changed)
+            {
+                boardView.Show(match);
+                if (before == "ready" && match.phase == "moving")
+                    dice.Play(match.dieFace, boardView.NodePosition(match.players[match.currentSeat].nodeId));
+            }
         }
         public void MoveDirection(int dx, int dz)
         {
-            if (!MyTurn || match.phase != "moving") return;
+            if (!MyTurn || ControlsLocked || hud.onlineMenu || hud.showMiniMap || match.phase != "moving") return;
             var graph = boardView.Graph;
             int at = match.players[MySeat].nodeId;
             foreach (int dest in graph.Neighbors(at))
@@ -111,11 +125,11 @@ namespace RailTrip3D
         private void Update()
         {
             if (match == null) return;
-            if (!isOnline && !MyTurn && match.phase != "finished" && Time.time >= nextAiMove)
+            if (!isOnline && !MyTurn && !dice.IsRolling && match.phase != "finished" && Time.time >= nextAiMove)
             { nextAiMove = Time.time + .32f; RunAi(); }
             if (Input.GetKeyDown(KeyCode.M)) hud.showMiniMap = !hud.showMiniMap;
             if (Input.mouseScrollDelta.y != 0) boardView.Zoom(Input.mouseScrollDelta.y * 1.6f);
-            if (hud.onlineMenu || !MyTurn) return;
+            if (hud.onlineMenu || hud.showMiniMap || ControlsLocked || !MyTurn) return;
             if (Input.GetKeyDown(KeyCode.UpArrow) || Input.GetKeyDown(KeyCode.W)) MoveDirection(0, 1);
             if (Input.GetKeyDown(KeyCode.DownArrow) || Input.GetKeyDown(KeyCode.S)) MoveDirection(0, -1);
             if (Input.GetKeyDown(KeyCode.LeftArrow) || Input.GetKeyDown(KeyCode.A)) MoveDirection(-1, 0);
@@ -134,7 +148,8 @@ namespace RailTrip3D
             if (match.phase == "ready")
             {
                 if (p.cards.Count > 0 && p.cards[0] == "CASH") GameRules.Apply(match, seat, "card", -1, 0);
-                else GameRules.Apply(match, seat, "roll");
+                else if (GameRules.Apply(match, seat, "roll"))
+                    dice.Play(match.dieFace, boardView.NodePosition(p.nodeId));
             }
             else if (match.phase == "moving")
             {
