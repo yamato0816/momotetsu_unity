@@ -87,7 +87,8 @@ test('public HTTP endpoints route room creation and state correctly', async () =
         const obj=new RailRoom({storage:{get:async k=>storage.get(k),put:async(k,v)=>storage.set(k,v)}});
         rooms.set(code,obj);
       }
-      return rooms.get(code);
+      return { fetch: (request, init) => rooms.get(code).fetch(
+        request instanceof Request ? request : new Request(request, init)) };
     }
   }};
   const create=await worker.fetch(new Request('https://railtrip.test/rooms', {
