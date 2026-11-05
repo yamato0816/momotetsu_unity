@@ -75,7 +75,8 @@ function validateBoard(input) {
   });
   if (map.nodes.some((n) => !shortestPath(map, map.startNode, n.id).length))
     throw Error('Map must be fully connected');
-  if (map.nodes.filter(n => n.kind !== 0).length < 3) throw Error('Add at least three station squares');
+  if (map.nodes.filter(n => n.kind !== 0 && n.name.trim().length > 0).length < 3)
+    throw Error('Add at least three named destination stations');
   map.title = limit(map.title, 70);
   return map;
 }
@@ -83,9 +84,9 @@ const wealth = (state, seat) => state.players[seat].cash +
   state.board.nodes.filter(n => n.owner === seat).reduce((total,n) => total + n.price, 0);
 const nextDestination = (state, previous = -1) => {
   const from = state.players[state.currentSeat].nodeId;
-  let candidates = state.board.nodes.filter(n => n.kind !== 0 && n.id !== previous &&
+  let candidates = state.board.nodes.filter(n => n.kind !== 0 && n.name && n.name.trim() && n.id !== previous &&
     distance(state.board, from, n.id) >= 5);
-  if (!candidates.length) candidates = state.board.nodes.filter(n => n.kind !== 0 && n.id !== previous);
+  if (!candidates.length) candidates = state.board.nodes.filter(n => n.kind !== 0 && n.name && n.name.trim() && n.id !== previous);
   if (!candidates.length) return;
   state.destination = candidates[pick(candidates.length)].id;
   // The poor ghost only appears once someone first reaches a destination.

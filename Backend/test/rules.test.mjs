@@ -32,6 +32,15 @@ test('only host may start, and only current player may move', () => {
   assert.equal(applyAction(s,0,'move',3),false);
   assert.equal(applyAction(s,0,'move',1),true);
 });
+test('unnamed rail event squares never become a destination', () => {
+  for (let i=0; i<25; i++) {
+    const s=state();
+    s.board.nodes[2].name='';
+    assert.equal(applyAction(s,0,'start'),true);
+    assert.notEqual(s.board.nodes[s.destination].name,'');
+    assert.equal(s.ghostSeat,-1);
+  }
+});
 test('cards work only before roll', () => {
   const s=state();
   applyAction(s,0,'start');

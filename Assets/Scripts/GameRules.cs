@@ -135,10 +135,10 @@ namespace RailTrip3D
             s.board.nodes.Where(n => n.owner == seat).Sum(n => n.price);
         public static void ChooseDestination(MatchData s, RailGraph g, int previous)
         {
-            var options = s.board.nodes.Where(n => n.kind != TileKind.Rail && n.id != previous &&
+            var options = s.board.nodes.Where(n => n.kind != TileKind.Rail && !string.IsNullOrWhiteSpace(n.name) && n.id != previous &&
                 g.Distance(s.players[s.currentSeat].nodeId, n.id) >= 5 &&
                 g.Distance(s.players[s.currentSeat].nodeId, n.id) < int.MaxValue).ToList();
-            if (options.Count == 0) options = s.board.nodes.Where(n => n.kind != TileKind.Rail && n.id != previous).ToList();
+            if (options.Count == 0) options = s.board.nodes.Where(n => n.kind != TileKind.Rail && !string.IsNullOrWhiteSpace(n.name) && n.id != previous).ToList();
             if (options.Count == 0) return;
             s.destination = options[UnityEngine.Random.Range(0, options.Count)].id;
             // The ghost appears after the first goal, never unfairly on turn one.

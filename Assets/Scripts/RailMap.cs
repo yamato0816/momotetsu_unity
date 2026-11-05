@@ -84,7 +84,7 @@ namespace RailTrip3D
         {
             if (map.nodes.Count < 3) return "At least 3 map nodes are required";
             if (!nodes.ContainsKey(map.startNode)) return "Start node is missing";
-            if (map.nodes.Count(n => n.kind != TileKind.Rail) < 3) return "Add more stations";
+            if (map.nodes.Count(n => n.kind != TileKind.Rail && !string.IsNullOrWhiteSpace(n.name)) < 3) return "Add three named destination stations";
             foreach (var node in map.nodes)
                 if (Distance(map.startNode, node.id) == int.MaxValue) return "Disconnected node: " + node.name + " #" + node.id;
             return "";
