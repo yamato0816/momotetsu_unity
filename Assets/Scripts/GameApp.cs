@@ -17,7 +17,7 @@ namespace RailTrip3D
         private float nextAiMove;
         private bool pendingCreateOrJoin;
 
-        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.BeforeSceneLoad)]
+        [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         private static void EnsureApp()
         {
             if (FindFirstObjectByType<GameApp>() == null)
