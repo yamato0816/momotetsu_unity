@@ -133,7 +133,7 @@ namespace RailTrip3D.Editor
                 return;
             }
             var map = asset.map;
-            EditorGUILayout.LabelField("Left click: select  |  SHIFT+click an empty grid square: add node  |  Link: connect two adjacent cells", EditorStyles.helpBox);
+            EditorGUILayout.LabelField("Click: select | SHIFT+click empty: add | CONNECT: click adjacent node to add/remove rail", EditorStyles.helpBox);
             using (new EditorGUILayout.HorizontalScope())
             {
                 if (GUILayout.Button("Validate", GUILayout.Width(85)))
@@ -217,10 +217,27 @@ namespace RailTrip3D.Editor
             }
             using (new EditorGUILayout.HorizontalScope())
             {
-                if (GUILayout.Button(connectingFrom == selected ? "Connecting... select another node" : "CONNECT FROM THIS NODE"))
+                if (GUILayout.Button(connectingFrom == selected ? "Choose second node to TOGGLE rail" : "TOGGLE RAIL FROM THIS NODE"))
                     connectingFrom = selected;
                 if (GUILayout.Button("Set as start")) { Undo.RecordObject(asset,"New Start"); map.startNode = chosen.id; EditorUtility.SetDirty(asset); }
                 if (GUILayout.Button("Delete node")) { RemoveNode(map, selected); selected = -1; connectingFrom = -1; }
+            }
+            EditorGUILayout.LabelField("CONNECTED RAILS",EditorStyles.boldLabel);
+            foreach(var neighbor in map.edges.Where(e=>e.a==selected || e.b==selected).ToList())
+            {
+                int other=neighbor.a==selected ? neighbor.b : neighbor.a;
+                if(other<0 || other>=map.nodes.Count)continue;
+                using(new EditorGUILayout.HorizontalScope())
+                {
+                    EditorGUILayout.LabelField("→ #"+other+"  "+map.nodes[other].name, GUILayout.Width(300));
+                    if(GUILayout.Button("REMOVE TRACK",GUILayout.Width(150)))
+                    {
+                        Undo.RecordObject(asset,"Remove rail");
+                        map.edges.Remove(neighbor);
+                        EditorUtility.SetDirty(asset);
+                        break;
+                    }
+                }
             }
         }
         private void AddNode(RailMap map, int x, int z)
@@ -236,10 +253,10 @@ namespace RailTrip3D.Editor
             var x = map.nodes[a]; var y = map.nodes[b];
             if (Mathf.Abs(x.x - y.x) + Mathf.Abs(x.z - y.z) != 1)
             { validation = "Connect adjacent grid cells only. Add intermediate rail nodes."; return; }
-            if (map.edges.Any(e => e.a == a && e.b == b || e.a == b && e.b == a))
-            { validation = "These cells are already connected"; return; }
-            Undo.RecordObject(asset,"Add rail");
-            map.edges.Add(new RailEdge(a,b));
+            var existing=map.edges.FirstOrDefault(e => e.a == a && e.b == b || e.a == b && e.b == a);
+            Undo.RecordObject(asset,existing==null ? "Add rail" : "Remove rail");
+            if(existing!=null) map.edges.Remove(existing);
+            else map.edges.Add(new RailEdge(a,b));
             EditorUtility.SetDirty(asset);
         }
         private void RemoveNode(RailMap map, int deleted)

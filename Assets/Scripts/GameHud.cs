@@ -167,16 +167,16 @@ namespace RailTrip3D
                 s.started && distance < int.MaxValue ? distance+" TILES BY SHORTEST RAIL" : "READY",
                 Txt(16,new Color(.32f,.37f,.35f),FontStyle.Bold,TextAnchor.MiddleCenter));
 
-            if (s.phase=="moving")
+            if (app.dice != null && app.dice.IsRolling)
+            {
+                GUI.Box(new Rect(971,144,271,54),"",cream);
+                Text(new Rect(985,154,242,32),"ROLLING...",darkHeading);
+            }
+            else if (s.phase=="moving")
             {
                 GUI.Box(new Rect(966,142,280,64),"",cream);
                 Text(new Rect(984,155,244,40),"STEPS LEFT  "+s.remaining,
                     Txt(27,new Color(.24f,.32f,.32f),FontStyle.Bold,TextAnchor.MiddleCenter));
-            }
-            else if (app.dice != null && app.dice.IsRolling)
-            {
-                GUI.Box(new Rect(971,144,271,54),"",cream);
-                Text(new Rect(985,154,242,32),"ROLLING...",darkHeading);
             }
             if (!string.IsNullOrEmpty(app.network.lastError))
             {
@@ -229,7 +229,13 @@ namespace RailTrip3D
             if(B(new Rect(33,649,195,49),showCards ? "CLOSE CARDS" : "CARDS",btn))
             { showCards=!showCards; showPlayers=false; }
             GUI.enabled=usable;
-            if(s.started && s.phase=="ready")
+            if(app.dice.IsRolling)
+            {
+                GUI.enabled=false;
+                B(new Rect(246,648,493,51),"DICE ROLLING...",btn);
+                GUI.enabled=usable;
+            }
+            else if(s.started && s.phase=="ready")
             {
                 if(B(new Rect(246,648,493,51),"ROLL THE DICE  ●",primary))
                 { showCards=false; app.Request("roll"); }

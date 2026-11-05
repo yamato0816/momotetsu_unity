@@ -211,6 +211,11 @@ namespace RailTrip3D
             text.characterSize = .19f;
             text.fontStyle = FontStyle.Bold;
             text.color = new Color(.12f,.18f,.22f);
+            // Billboards use a readable ivory plaque like printed location signs.
+            var plaque = Part(PrimitiveType.Cube, "Ivory station sign",labelRoot.transform.position,
+                new Vector3(Mathf.Max(1.25f,n.name.Length*.185f),.42f,.06f),
+                new Color(1f,.99f,.91f),labelRoot.transform);
+            plaque.transform.localPosition = new Vector3(0,0,-.08f);
             nameLabels[n.id] = text;
         }
         private void DecorateStation(RailNode node, HashSet<Vector2Int> land)
@@ -222,7 +227,7 @@ namespace RailTrip3D
                 int dz = (int)(Hash(x,z+i,11) % 5) - 2;
                 if (dx == 0 && dz == 0) continue;
                 var place = new Vector2Int(x + dx, z + dz);
-                if (!land.Contains(place)) continue;
+                if (!land.Contains(place) || graph.map.nodes.Any(n=>n.x==place.x && n.z==place.y)) continue;
                 Vector3 p = new Vector3(place.x * 1.65f + .28f, .15f, place.y * 1.65f + .25f);
                 if (Hash(place.x,place.y,i) % 3 == 0) Tree(p, i, root.transform);
                 else House(p, i, root.transform);
