@@ -133,6 +133,14 @@ namespace RailTrip3D.Editor
                 return;
             }
             var map = asset.map;
+            EditorGUI.BeginChangeCheck();
+            float visualSpacing = EditorGUILayout.Slider("Station / rail spacing", map.VisualCellSize, 1.8f, 3.4f);
+            if (EditorGUI.EndChangeCheck())
+            {
+                Undo.RecordObject(asset, "Adjust railway grid spacing");
+                map.tileSpacing = visualSpacing;
+                EditorUtility.SetDirty(asset);
+            }
             EditorGUILayout.LabelField("Click: select | SHIFT+click empty: add | CONNECT: click adjacent node to add/remove rail", EditorStyles.helpBox);
             using (new EditorGUILayout.HorizontalScope())
             {

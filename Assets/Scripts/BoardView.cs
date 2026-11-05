@@ -19,7 +19,9 @@ namespace RailTrip3D
         private readonly Dictionary<int, Vector3> positions = new Dictionary<int, Vector3>();
         private readonly Dictionary<int, Renderer> stopTiles = new Dictionary<int, Renderer>();
         private readonly Dictionary<long, GameObject> routeOverlays = new Dictionary<long, GameObject>();
-        private readonly Dictionary<int, TextMesh> nameLabels = new Dictionary<int, TextMesh>();
+        private readonly Dictionary<int, GameObject> nameLabels = new Dictionary<int, GameObject>();
+        private readonly HashSet<Vector2Int> occupiedLabelSlots = new HashSet<Vector2Int>();
+        private float cellSize = RailGraph.DefaultCellSpacing;
         private readonly List<Transform> trains = new List<Transform>();
         private readonly List<Vector3> priorTrainPositions = new List<Vector3>();
         private readonly List<SpriteRenderer> sprites = new List<SpriteRenderer>();
@@ -76,18 +78,20 @@ namespace RailTrip3D
             if (root != null) Destroy(root);
             root = new GameObject("Generated coastal rail diorama");
             root.transform.SetParent(transform, false);
-            stopTiles.Clear(); routeOverlays.Clear(); positions.Clear(); nameLabels.Clear();
+            stopTiles.Clear(); routeOverlays.Clear(); positions.Clear(); nameLabels.Clear(); occupiedLabelSlots.Clear();
             trains.Clear(); priorTrainPositions.Clear(); sprites.Clear();
             graph = new RailGraph(map);
-            foreach (var n in map.nodes) positions.Add(n.id, RailGraph.Position(n));
+            cellSize = map.VisualCellSize;
+            foreach (var n in map.nodes) positions.Add(n.id, RailGraph.Position(n, cellSize));
 
             var minX = map.nodes.Min(n => n.x);
             var maxX = map.nodes.Max(n => n.x);
             var minZ = map.nodes.Min(n => n.z);
             var maxZ = map.nodes.Max(n => n.z);
-            float spanX = (maxX - minX + 13) * 1.65f;
-            float spanZ = (maxZ - minZ + 13) * 1.65f;
-            Vector3 center = new Vector3((minX + maxX) * .825f, -1.0f, (minZ + maxZ) * .825f);
+            float spanX = (maxX - minX + 13) * cellSize;
+            float spanZ = (maxZ - minZ + 13) * cellSize;
+            Vector3 center = new Vector3((minX + maxX) * cellSize * .5f, -1.0f,
+                (minZ + maxZ) * cellSize * .5f);
             Part(PrimitiveType.Cube, "Clear turquoise sea", center,
                 new Vector3(spanX, 1.45f, spanZ), Sea, root.transform);
 
@@ -114,20 +118,20 @@ namespace RailTrip3D
             {
                 bool edge = !land.Contains(cell + Vector2Int.up) || !land.Contains(cell + Vector2Int.right)
                     || !land.Contains(cell + Vector2Int.down) || !land.Contains(cell + Vector2Int.left);
-                Vector3 p = new Vector3(cell.x * 1.65f, 0, cell.y * 1.65f);
+                Vector3 p = new Vector3(cell.x * cellSize, 0, cell.y * cellSize);
                 Part(PrimitiveType.Cube, "Island side", p + Vector3.down * .34f,
-                    new Vector3(1.65f, .64f, 1.65f), edge ? Sand : Grass, root.transform);
+                    new Vector3(cellSize, .64f, cellSize), edge ? Sand : Grass, root.transform);
                 Part(PrimitiveType.Cube, "Green terrain", p + Vector3.down * .095f,
-                    new Vector3(1.66f, .16f, 1.66f),
+                    new Vector3(cellSize + .01f, .16f, cellSize + .01f),
                     Hash(cell.x,cell.y,3) % 3 == 0 ? GrassAlt : Grass, root.transform);
             }
 
             // Sparse scenery in countryside, kept away from the rail tiles.
             foreach(var cell in land)
             {
-                if(Hash(cell.x,cell.y,17)%13!=0) continue;
+                if(Hash(cell.x,cell.y,17)%24!=0) continue;
                 if(map.nodes.Any(n=>n.x==cell.x && n.z==cell.y)) continue;
-                Tree(new Vector3(cell.x*1.65f+.19f,.15f,cell.y*1.65f-.13f),
+                Tree(new Vector3(cell.x*cellSize+.19f,.15f,cell.y*cellSize-.13f),
                     (int)(Hash(cell.x,cell.y,8)%7),root.transform);
             }
             foreach (var e in map.edges) DrawRail(e);
@@ -140,7 +144,7 @@ namespace RailTrip3D
             if (mapCamera == null) CreateCamera();
             SetupLight();
             cameraFocus = NodePosition(map.startNode);
-            mapCamera.transform.position = cameraFocus + new Vector3(0, 19, -22);
+            mapCamera.transform.position = cameraFocus + new Vector3(0, 12, -13);
             mapCamera.transform.LookAt(cameraFocus + Vector3.up * .5f);
             initialized = true;
         }
@@ -167,32 +171,40 @@ namespace RailTrip3D
         }
         private void DrawRail(RailEdge edge)
         {
-            var a = NodePosition(edge.a);
-            var b = NodePosition(edge.b);
-            var mid = (a + b) / 2;
-            bool horizontal = Mathf.Abs(a.x - b.x) > .01f;
-            Vector3 bed = horizontal ? new Vector3(1.7f,.11f,.82f) : new Vector3(.82f,.11f,1.7f);
-            Part(PrimitiveType.Cube, "White ballast", mid + Vector3.up * .12f, bed, White, root.transform);
-            // Distinct black-and-cream sleepers like an easily readable board-game track.
-            for (int i = 0; i < 5; i++)
+            Vector3 a = NodePosition(edge.a), b = NodePosition(edge.b);
+            Vector3 mid = (a + b) * .5f;
+            float segmentLength = Vector3.Distance(a, b);
+            bool horizontal = Mathf.Abs(a.x-b.x) > .01f;
+            // Each section spans exactly one graph edge. Changing tileSpacing keeps
+            // terrain, stations, sleepers and rails aligned without gaps.
+            float bedWidth = .68f;
+            float run = segmentLength + .075f;
+            Part(PrimitiveType.Cube, "Cream railway ballast", mid + Vector3.up*.12f,
+                horizontal ? new Vector3(run,.11f,bedWidth) : new Vector3(bedWidth,.11f,run),
+                White, root.transform);
+            const int sleepers = 7;
+            for (int i=0; i<sleepers; i++)
             {
-                float offset = (i - 2) * .33f;
-                Vector3 point = mid + Vector3.up * .193f +
-                    (horizontal ? Vector3.right * offset : Vector3.forward * offset);
-                Vector3 size = horizontal ? new Vector3(.13f,.047f,.77f) : new Vector3(.77f,.047f,.13f);
-                Part(PrimitiveType.Cube, "Dark sleeper", point, size, Slate, root.transform);
+                float offset = ((i+.5f)/sleepers-.5f)*segmentLength;
+                Vector3 at = mid+Vector3.up*.193f +
+                    (horizontal ? Vector3.right : Vector3.forward)*offset;
+                Part(PrimitiveType.Cube, "Black sleeper", at,
+                    horizontal ? new Vector3(.15f,.045f,.58f) : new Vector3(.58f,.045f,.15f),
+                    Slate, root.transform);
             }
-            for (int side = -1; side <= 1; side += 2)
+            for (int side=-1; side<=1; side+=2)
             {
-                Vector3 p = mid + Vector3.up * .24f +
-                    (horizontal ? Vector3.forward : Vector3.right) * (side * .22f);
-                Vector3 size = horizontal ? new Vector3(1.7f,.05f,.045f) : new Vector3(.045f,.05f,1.7f);
-                Part(PrimitiveType.Cube, "Silver rail", p, size, new Color(.62f,.68f,.67f), root.transform);
+                Vector3 at = mid + Vector3.up*.245f +
+                    (horizontal ? Vector3.forward : Vector3.right)*(side*.20f);
+                Part(PrimitiveType.Cube, "Steel rail",at,
+                    horizontal ? new Vector3(run,.047f,.042f) : new Vector3(.042f,.047f,run),
+                    new Color(.61f,.67f,.68f),root.transform);
             }
-            var overlay = Part(PrimitiveType.Cube, "Optional shortest-route highlight",
-                mid + Vector3.up * .29f,
-                horizontal ? new Vector3(1.68f,.045f,.07f) : new Vector3(.07f,.045f,1.68f),
-                Route, root.transform);
+            var overlay = Part(PrimitiveType.Cube, "Shortest route highlight",
+                mid+Vector3.up*.29f,
+                horizontal ? new Vector3(segmentLength,.04f,.055f) :
+                    new Vector3(.055f,.04f,segmentLength),
+                Route,root.transform);
             overlay.SetActive(false);
             routeOverlays[Key(edge.a, edge.b)] = overlay;
         }
@@ -217,41 +229,72 @@ namespace RailTrip3D
                 Billboard("Pixel card at station", PixelArt.Get("card", Color.white),
                     p + Vector3.up * 1.0f, .73f, root.transform);
             if (string.IsNullOrWhiteSpace(n.name)) return;
-            var labelRoot = new GameObject("Station label: " + n.name);
-            labelRoot.transform.SetParent(root.transform, false);
-            labelRoot.transform.position = p + new Vector3(0, 1.55f, .35f);
-            var text = labelRoot.AddComponent<TextMesh>();
-            text.text = GameLanguage.City(n.name);
+            // Flat signs lie on the XZ board plane: never billboard them to the camera.
+            // We pick north/south according to connected tracks and reserve slots
+            // so neighboring stations do not print signs in the same space.
+            int side = ChooseLabelSide(n);
+            string label = GameLanguage.City(n.name);
+            float offset = cellSize*.44f;
+            Vector3 at = p + new Vector3(0,.39f,side*offset);
+            var holder = new GameObject("Flat station name: " + n.name);
+            holder.transform.SetParent(root.transform,false);
+            holder.transform.position = at;
+            float textWidth = label.Length * (GameLanguage.IsJapanese ? .31f : .205f) + .38f;
+            float width = Mathf.Clamp(textWidth,1.3f,cellSize*1.87f);
+            var plaque = Part(PrimitiveType.Cube,"Ground-mounted ivory label",
+                at,new Vector3(width,.075f,.56f),
+                new Color(1f,.99f,.92f),holder.transform);
+            plaque.transform.localPosition = Vector3.zero;
+            var textGo = new GameObject("Text on flat plaque");
+            textGo.transform.SetParent(holder.transform,false);
+            textGo.transform.localPosition = new Vector3(0,.061f,0);
+            // TextMesh forward (+Z) becomes world +Y, facing an overhead camera.
+            textGo.transform.localRotation = Quaternion.Euler(-90f,0,0);
+            var text = textGo.AddComponent<TextMesh>();
+            text.text = label;
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
-            text.fontSize = 70;
-            text.characterSize = .19f;
+            text.fontSize = 64;
+            text.characterSize = .155f;
             text.fontStyle = FontStyle.Bold;
-            text.color = new Color(.12f,.18f,.22f);
-            var japaneseFont = GameLanguage.JapaneseFont;
-            if (japaneseFont != null)
+            text.color = new Color(.13f,.17f,.18f);
+            Font font = GameLanguage.JapaneseFont;
+            if (font != null)
             {
-                text.font = japaneseFont;
-                labelRoot.GetComponent<MeshRenderer>().sharedMaterial = japaneseFont.material;
+                text.font = font;
+                var r = textGo.GetComponent<MeshRenderer>();
+                if (r != null) r.sharedMaterial = font.material;
             }
-            // Billboards use a readable ivory plaque like printed location signs.
-            var plaque = Part(PrimitiveType.Cube, "Ivory station sign",labelRoot.transform.position,
-                new Vector3(Mathf.Max(1.25f,n.name.Length*.185f),.42f,.06f),
-                new Color(1f,.99f,.91f),labelRoot.transform);
-            plaque.transform.localPosition = new Vector3(0,0,-.08f);
-            nameLabels[n.id] = text;
+            nameLabels.Add(n.id,holder);
+        }
+        private int ChooseLabelSide(RailNode n)
+        {
+            bool northRail = graph.Neighbors(n.id).Any(id=>graph.nodes[id].z>n.z);
+            bool southRail = graph.Neighbors(n.id).Any(id=>graph.nodes[id].z<n.z);
+            Vector2Int north = new Vector2Int(n.x, n.z*2+1);
+            Vector2Int south = new Vector2Int(n.x, n.z*2-1);
+            bool freeNorth = !occupiedLabelSlots.Contains(north);
+            bool freeSouth = !occupiedLabelSlots.Contains(south);
+            int side;
+            if (freeNorth && !northRail) side=1;
+            else if (freeSouth && !southRail) side=-1;
+            else if (freeNorth) side=1;
+            else if (freeSouth) side=-1;
+            else side=(n.id%2==0)?1:-1;
+            occupiedLabelSlots.Add(side>0 ? north : south);
+            return side;
         }
         private void DecorateStation(RailNode node, HashSet<Vector2Int> land)
         {
             int x = node.x, z = node.z;
-            for (int i = 0; i < 5; i++)
+            for (int i = 0; i < 3; i++)
             {
                 int dx = (int)(Hash(x+i,z,9) % 5) - 2;
                 int dz = (int)(Hash(x,z+i,11) % 5) - 2;
                 if (dx == 0 && dz == 0) continue;
                 var place = new Vector2Int(x + dx, z + dz);
                 if (!land.Contains(place) || graph.map.nodes.Any(n=>n.x==place.x && n.z==place.y)) continue;
-                Vector3 p = new Vector3(place.x * 1.65f + .28f, .15f, place.y * 1.65f + .25f);
+                Vector3 p = new Vector3(place.x * cellSize + .28f, .15f, place.y * cellSize + .25f);
                 if (Hash(place.x,place.y,i) % 3 == 0) Tree(p, i, root.transform);
                 else House(p, i, root.transform);
             }
@@ -292,7 +335,7 @@ namespace RailTrip3D
             var go = new GameObject("Local isometric follow camera");
             mapCamera = go.AddComponent<Camera>();
             mapCamera.orthographic = true;
-            mapCamera.orthographicSize = 9.6f; // Not a permanent whole-map view.
+            mapCamera.orthographicSize = 6.1f; // Close-up: only a few adjacent stations visible.
             mapCamera.clearFlags = CameraClearFlags.SolidColor;
             mapCamera.backgroundColor = Sea;
             if (Camera.main == null) go.tag = "MainCamera";
@@ -383,22 +426,25 @@ namespace RailTrip3D
                     trains[i].rotation = Quaternion.Slerp(trains[i].rotation,
                         Quaternion.LookRotation(movement,Vector3.up),Time.deltaTime*14);
             }
-            Vector3 playerPos = NodePosition(snapshot.players[activeSeat].nodeId);
-            // Look a little ahead of the active train, leaving UI space at the edges.
-            Vector3 desiredFocus = playerPos + new Vector3(0,.3f,1.8f);
-            cameraFocus = Vector3.Lerp(cameraFocus,desiredFocus,1f-Mathf.Exp(-4.3f*Time.deltaTime));
-            Vector3 cameraPos = cameraFocus + new Vector3(0,19,-22);
+            // Follow the interpolating train instead of snapping to its node.
+            // Look a little ahead in the train's current heading.
+            Transform activeTrain = trains[Mathf.Clamp(activeSeat,0,trains.Count-1)];
+            Vector3 heading = activeTrain.forward; heading.y = 0;
+            heading = heading.sqrMagnitude < .01f ? Vector3.forward : heading.normalized;
+            Vector3 desiredFocus = activeTrain.position + heading*.70f + Vector3.up*.2f;
+            float follow = 1f-Mathf.Exp(-7f*Time.deltaTime);
+            cameraFocus = Vector3.Lerp(cameraFocus,desiredFocus,follow);
+            Vector3 cameraPos = cameraFocus+new Vector3(0,12,-13);
             mapCamera.transform.position = Vector3.Lerp(mapCamera.transform.position,
-                cameraPos,1f-Mathf.Exp(-5f*Time.deltaTime));
+                cameraPos,follow);
             mapCamera.transform.LookAt(cameraFocus);
+            // Hide the complete plaque, not just the lettering, outside the local area.
             foreach (var label in nameLabels)
             {
-                Vector3 pos = NodePosition(label.Key);
-                bool near = Vector3.Distance(new Vector3(pos.x,0,pos.z),
-                    new Vector3(cameraFocus.x,0,cameraFocus.z)) < 12.5f;
-                if (label.Value.gameObject.activeSelf != near) label.Value.gameObject.SetActive(near);
-                if (near) label.Value.transform.rotation =
-                    Quaternion.LookRotation(mapCamera.transform.position-label.Value.transform.position,Vector3.up);
+                Vector3 pos=NodePosition(label.Key);
+                bool nearby = (new Vector2(pos.x-cameraFocus.x,pos.z-cameraFocus.z)).sqrMagnitude
+                    < cellSize*cellSize*14f;
+                if (label.Value.activeSelf != nearby) label.Value.SetActive(nearby);
             }
             foreach (var sprite in sprites)
                 if (sprite != null && sprite.gameObject.activeInHierarchy)
@@ -408,7 +454,7 @@ namespace RailTrip3D
         public void Zoom(float delta)
         {
             if (mapCamera!=null) mapCamera.orthographicSize =
-                Mathf.Clamp(mapCamera.orthographicSize - delta*.7f,6.3f,16f);
+                Mathf.Clamp(mapCamera.orthographicSize - delta*.4f,5.3f,9.3f);
         }
     }
 }

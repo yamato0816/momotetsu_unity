@@ -19,6 +19,8 @@ namespace RailTrip3D
     [Serializable] public class RailMap
     {
         public string title = "Japan Rail Trip";
+        [Range(1.8f, 3.4f)] public float tileSpacing = 2.2f; // Visual-only: stations & rails share the same spacing.
+        public float VisualCellSize => Mathf.Clamp(tileSpacing <= 0 ? 2.2f : tileSpacing, 1.8f, 3.4f);
         public int startNode;
         public List<RailNode> nodes = new List<RailNode>();
         public List<RailEdge> edges = new List<RailEdge>();
@@ -90,6 +92,7 @@ namespace RailTrip3D
                 if (Distance(map.startNode, node.id) == int.MaxValue) return "Disconnected node: " + node.name + " #" + node.id;
             return "";
         }
-        public static Vector3 Position(RailNode n) => new Vector3(n.x * 1.65f, 0, n.z * 1.65f);
+        public const float DefaultCellSpacing = 2.2f;
+        public static Vector3 Position(RailNode n, float spacing = DefaultCellSpacing) => new Vector3(n.x * spacing, 0, n.z * spacing);
     }
 }
