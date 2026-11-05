@@ -28,13 +28,20 @@ namespace RailTrip3D
         {
             Application.targetFrameRate = 60;
             if (mapAsset == null) mapAsset = Resources.Load<RailMapAsset>("Maps/ActiveMap");
-            configuredMap = mapAsset != null ? mapAsset.RuntimeCopy() : SampleMap.Create();
             try
             {
-                string validation = new RailGraph(configuredMap).Validate();
-                if (validation != "") { Debug.LogError("Map invalid: " + validation + ", using sample"); configuredMap = SampleMap.Create(); }
+                var sceneBoard = FindFirstObjectByType<SceneRailBoard>();
+                if(sceneBoard == null)
+                    throw new System.InvalidOperationException(
+                        "Editable Scene is missing. In Unity choose Rail Trip > Rebuild Editable Scene from Asset.");
+                configuredMap = sceneBoard.Export(); // Scene hierarchy is the source of truth.
             }
-            catch (System.Exception ex) { Debug.LogError(ex); configuredMap = SampleMap.Create(); }
+            catch(System.Exception ex)
+            {
+                Debug.LogError("Scene map error: " + ex.Message);
+                configuredMap = mapAsset != null ? mapAsset.RuntimeCopy() : SampleMap.Create();
+                status = "SCENE ERROR: " + ex.Message;
+            }
             boardView = gameObject.AddComponent<BoardView>();
             network = gameObject.AddComponent<OnlineClient>();
             dice = gameObject.AddComponent<DiceRollView>();
@@ -51,8 +58,8 @@ namespace RailTrip3D
             isOnline = false; pendingCreateOrJoin = false;
             match = GameRules.NewMatch(configuredMap, "YOU", "CPU RIN", "CPU KAI");
             GameRules.Apply(match, 0, "start");
-            boardView.Build(match.board);
-            boardView.Show(match);
+            try { boardView.Build(match.board); boardView.Show(match); }
+            catch(System.Exception ex) { Debug.LogError(ex); status = ex.Message; }
             status = "Local game: YOU vs two computer players";
             hud.onlineMenu = false;
             nextAiMove = Time.time + 1;
@@ -80,8 +87,16 @@ namespace RailTrip3D
         private void ReceivedNetworkState(MatchData state)
         {
             if (state == null || state.board == null) return;
-            if (!isOnline || match == null || match.board.nodes.Count != state.board.nodes.Count)
-                boardView.Build(state.board);
+            if(!isOnline || match==null || match.board.nodes.Count!=state.board.nodes.Count)
+            {
+                try { boardView.Build(state.board); }
+                catch(System.Exception ex)
+                {
+                    status = "MAP MISMATCH: " + ex.Message;
+                    Debug.LogError(status);
+                    return;
+                }
+            }
             bool animateRoll = isOnline && match != null && match.phase == "ready" &&
                 state.phase == "moving" && state.currentSeat == match.currentSeat && state.rolled > 0;
             isOnline = true;
