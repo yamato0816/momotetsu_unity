@@ -113,8 +113,9 @@ namespace RailTrip3D.Editor
             }
             var a=chosen[0];var b=chosen[1];
             float d=board.gridSize;
-            if(Mathf.Abs(a.transform.position.x-b.transform.position.x)+
-                Mathf.Abs(a.transform.position.z-b.transform.position.z) > d+.1f)
+            float dx=Mathf.Abs(a.transform.position.x-b.transform.position.x);
+            float dz=Mathf.Abs(a.transform.position.z-b.transform.position.z);
+            if(Mathf.Abs(dx+dz-d)>.1f || (dx>.1f && dz>.1f))
             {
                 Debug.LogError("Only adjacent grid cells can connect. Add intermediate rail squares.");return;
             }
@@ -125,6 +126,87 @@ namespace RailTrip3D.Editor
             if(parent==null){Debug.LogError("02_TRACKS scene group is missing.");return;}
             MakeTrack(a,b,parent,board.gridSize);
             EditorSceneManager.MarkSceneDirty(board.gameObject.scene);
+        }
+
+        [MenuItem("Rail Trip/07 Add Station by Duplicating Selected")]
+        public static void AddStation()
+        {
+            var board=UnityEngine.Object.FindFirstObjectByType<SceneRailBoard>();
+            if(board==null){Debug.LogError("Open the editable Scene first.");return;}
+            var nodes=board.Nodes.OrderBy(n=>n.nodeId).ToArray();
+            SceneRailNode template=Selection.activeGameObject!=null
+                ?Selection.activeGameObject.GetComponent<SceneRailNode>():null;
+            if(template==null||template.GetComponentInParent<SceneRailBoard>()!=board)
+                template=nodes.FirstOrDefault(n=>n.flatNamePlate!=null);
+            if(template==null){Debug.LogError("No suitable existing station to duplicate.");return;}
+            var used=new HashSet<Vector2Int>(
+                nodes.Select(n=>new Vector2Int(
+                    Mathf.RoundToInt(n.transform.position.x/board.gridSize),
+                    Mathf.RoundToInt(n.transform.position.z/board.gridSize))));
+            Vector2Int origin=new Vector2Int(
+                Mathf.RoundToInt(template.transform.position.x/board.gridSize),
+                Mathf.RoundToInt(template.transform.position.z/board.gridSize));
+            Vector2Int[] options={
+                origin+Vector2Int.right,origin+Vector2Int.left,
+                origin+Vector2Int.up,origin+Vector2Int.down
+            };
+            Vector2Int next=options.FirstOrDefault(p=>!used.Contains(p));
+            if(used.Contains(next))
+            {
+                EditorUtility.DisplayDialog("No adjacent space",
+                    "Select a station with an empty neighboring grid square.","OK");
+                return;
+            }
+            var copy=UnityEngine.Object.Instantiate(template.gameObject,template.transform.parent);
+            Undo.RegisterCreatedObjectUndo(copy,"Add station and models");
+            var component=copy.GetComponent<SceneRailNode>();
+            component.nodeId=nodes.Max(n=>n.nodeId)+1;
+            component.stationName="New Station";
+            component.kind=TileKind.Station;
+            component.price=200;component.income=40;component.overWater=false;
+            copy.name="STOP "+component.nodeId.ToString("D3")+" / New Station";
+            copy.transform.position=new Vector3(
+                next.x*board.gridSize,0,next.y*board.gridSize);
+            component.RefreshLabel();
+            var trackGroup=board.transform.Find("02_TRACKS");
+            if(trackGroup!=null)MakeTrack(template,component,trackGroup,board.gridSize);
+            Selection.activeGameObject=copy;
+            EditorSceneManager.MarkSceneDirty(copy.scene);
+        }
+
+        [MenuItem("Rail Trip/08 Snap Station Roots to Grid")]
+        public static void SnapStations()
+        {
+            var board=UnityEngine.Object.FindFirstObjectByType<SceneRailBoard>();
+            if(board==null)return;
+            foreach(var node in board.Nodes)
+            {
+                Undo.RecordObject(node.transform,"Snap rail node");
+                Vector3 p=node.transform.position;
+                node.transform.position=new Vector3(
+                    Mathf.Round(p.x/board.gridSize)*board.gridSize,
+                    p.y,Mathf.Round(p.z/board.gridSize)*board.gridSize);
+            }
+            RefreshRailGeometry();
+        }
+
+        [MenuItem("Rail Trip/09 Reindex Station IDs After Deletions")]
+        public static void ReindexNodes()
+        {
+            var board=UnityEngine.Object.FindFirstObjectByType<SceneRailBoard>();
+            if(board==null)return;
+            var list=board.Nodes.OrderBy(n=>n.nodeId).ToArray();
+            var originalStart=list.FirstOrDefault(n=>n.nodeId==board.startNodeId);
+            Undo.RecordObject(board,"Reindex scene node IDs");
+            for(int i=0;i<list.Length;i++)
+            {
+                Undo.RecordObject(list[i],"Reindex station");
+                list[i].nodeId=i;
+                if(list[i]==originalStart)board.startNodeId=i;
+                list[i].name="STOP "+i.ToString("D3")+" / "+
+                    (string.IsNullOrWhiteSpace(list[i].stationName)?"Rail":list[i].stationName);
+            }
+            RefreshRailGeometry();
         }
 
         private static Material Mat(string name,Color color)
