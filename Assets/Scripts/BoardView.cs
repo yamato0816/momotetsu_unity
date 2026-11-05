@@ -204,13 +204,19 @@ namespace RailTrip3D
             labelRoot.transform.SetParent(root.transform, false);
             labelRoot.transform.position = p + new Vector3(0, 1.55f, .35f);
             var text = labelRoot.AddComponent<TextMesh>();
-            text.text = n.name;
+            text.text = GameLanguage.City(n.name);
             text.anchor = TextAnchor.MiddleCenter;
             text.alignment = TextAlignment.Center;
             text.fontSize = 70;
             text.characterSize = .19f;
             text.fontStyle = FontStyle.Bold;
             text.color = new Color(.12f,.18f,.22f);
+            var japaneseFont = GameLanguage.JapaneseFont;
+            if (japaneseFont != null)
+            {
+                text.font = japaneseFont;
+                labelRoot.GetComponent<MeshRenderer>().sharedMaterial = japaneseFont.material;
+            }
             // Billboards use a readable ivory plaque like printed location signs.
             var plaque = Part(PrimitiveType.Cube, "Ivory station sign",labelRoot.transform.position,
                 new Vector3(Mathf.Max(1.25f,n.name.Length*.185f),.42f,.06f),

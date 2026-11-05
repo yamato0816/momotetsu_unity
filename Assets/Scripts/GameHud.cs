@@ -81,26 +81,7 @@ namespace RailTrip3D
         private void PrepareStyles()
         {
             if (built) return;
-            displayFont = Resources.Load<Font>("Fonts/GameUIFont"); // add this font for WebGL Japanese
-#if !UNITY_WEBGL
-            // In desktop Editor, try installed Japanese system fonts without redistributing them.
-            if (displayFont == null)
-            {
-                foreach (string candidate in new[] { "Yu Gothic", "Meiryo", "Noto Sans CJK JP" })
-                {
-                    try
-                    {
-                        if (Array.Exists(Font.GetOSInstalledFontNames(), n =>
-                            n.IndexOf(candidate,StringComparison.OrdinalIgnoreCase) >= 0))
-                        {
-                            displayFont=Font.CreateDynamicFontFromOSFont(candidate,22);
-                            if(displayFont!=null)break;
-                        }
-                    }
-                    catch (Exception) { /* Desktop fallback remains in English. */ }
-                }
-            }
-#endif
+            displayFont = GameLanguage.JapaneseFont;
             coral = Panel(coralColor);
             cream = Panel(new Color(.99f,.97f,.85f,.96f));
             dark = Panel(new Color(.06f,.18f,.23f,.94f));
@@ -179,7 +160,7 @@ namespace RailTrip3D
             GUI.Box(new Rect(894,16,363,113),"",cream);
             Text(new Rect(912,25,328,22),L("目的地","NEXT DESTINATION"),Txt(16,new Color(.40f,.42f,.36f),FontStyle.Bold));
             string dest = s.started && app.boardView.Graph.nodes.ContainsKey(s.destination)
-                ? app.boardView.Graph.nodes[s.destination].name.ToUpperInvariant() : "WAITING";
+                ? GameLanguage.City(app.boardView.Graph.nodes[s.destination].name).ToUpperInvariant() : L("準備中","WAITING");
             Text(new Rect(913,50,314,40),dest,value);
             int distance = s.started
                 ? app.boardView.Graph.Distance(s.players[s.currentSeat].nodeId,s.destination) : 0;
@@ -332,7 +313,7 @@ namespace RailTrip3D
                 int seat=i;
                 Text(new Rect(47,207+i*63,355,48),
                     (i==s.currentSeat?"● ":"   ")+s.players[seat].name+
-                    "   "+GameRules.Wealth(s,seat).ToString("N0")+"M",
+                    "   "+GameRules.Wealth(s,seat).ToString("N0")+L("万円","M"),
                     Txt(18,BoardView.PlayerColors[i],FontStyle.Bold));
             }
         }
@@ -384,7 +365,7 @@ namespace RailTrip3D
                 if(!string.IsNullOrEmpty(n.name) &&
                     (n.id==s.destination || n.id==s.players[s.currentSeat].nodeId ||
                      (n.id%4==0 && unit>9)))
-                    Text(new Rect(p.x+6,p.y-12,125,20),n.name,small);
+                    Text(new Rect(p.x+6,p.y-12,125,20),GameLanguage.City(n.name),small);
             }
             if(s.started)
             {
