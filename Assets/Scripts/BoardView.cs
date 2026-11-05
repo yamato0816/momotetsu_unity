@@ -95,7 +95,15 @@ namespace RailTrip3D
             // exposed overseas tracks become bridges. No external map texture.
             var land = new HashSet<Vector2Int>();
             foreach (var n in map.nodes)
-                if (!n.overWater) land.Add(new Vector2Int(n.x, n.z));
+            {
+                if (n.overWater) continue;
+                land.Add(new Vector2Int(n.x, n.z));
+                // Widen ordinary mainland railway corridors into a coherent
+                // green landscape instead of a one-tile-wide strip of islands.
+                for(int dx=-1;dx<=1;dx++) for(int dz=-1;dz<=1;dz++)
+                    if(Hash(n.x+dx,n.z+dz,7)%9!=0)
+                        land.Add(new Vector2Int(n.x+dx,n.z+dz));
+            }
             foreach (var n in map.nodes.Where(n => !string.IsNullOrWhiteSpace(n.name)))
                 for (int dx = -2; dx <= 2; dx++)
                     for (int dz = -2; dz <= 2; dz++)
@@ -114,6 +122,14 @@ namespace RailTrip3D
                     Hash(cell.x,cell.y,3) % 3 == 0 ? GrassAlt : Grass, root.transform);
             }
 
+            // Sparse scenery in countryside, kept away from the rail tiles.
+            foreach(var cell in land)
+            {
+                if(Hash(cell.x,cell.y,17)%13!=0) continue;
+                if(map.nodes.Any(n=>n.x==cell.x && n.z==cell.y)) continue;
+                Tree(new Vector3(cell.x*1.65f+.19f,.15f,cell.y*1.65f-.13f),
+                    (int)(Hash(cell.x,cell.y,8)%7),root.transform);
+            }
             foreach (var e in map.edges) DrawRail(e);
             foreach (var node in map.nodes) DrawStop(node);
             foreach (var node in map.nodes.Where(n => !string.IsNullOrWhiteSpace(n.name)))
