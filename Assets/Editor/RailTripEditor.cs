@@ -63,10 +63,23 @@ namespace RailTrip3D.Editor
         private int addX, addZ;
         private string validation = "";
         private const int Cell = 21;
+        // Ctrl/Cmd+Shift+M now opens the editable 3D Scene, not the legacy grid view.
         [MenuItem("Rail Trip/Edit Map %#m")]
+        public static void OpenSceneEditor()
+        {
+            EditableSceneBaker.OpenScene();
+            var board = UnityEngine.Object.FindFirstObjectByType<SceneRailBoard>();
+            if (board != null)
+            {
+                Selection.activeGameObject = board.gameObject;
+                if (SceneView.lastActiveSceneView != null)
+                    SceneView.lastActiveSceneView.FrameSelected();
+            }
+        }
+        [MenuItem("Rail Trip/Legacy 2D Asset Grid Editor")]
         public static void Open()
         {
-            var w = GetWindow<RailMapEditorWindow>("Rail Trip Map Editor");
+            var w = GetWindow<RailMapEditorWindow>("Legacy Map Asset (not live Scene)");
             w.minSize = new Vector2(800, 600); w.Show();
         }
         [MenuItem("Rail Trip/Reset to Sample Japan Map")]
