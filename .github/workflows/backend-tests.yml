@@ -16,3 +16,8 @@ jobs:
           node-version: "22"
       - run: npm test
       - run: node --check src/worker.js
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install tree-sitter tree-sitter-c-sharp
+      - run: python ../ci/check_unity_syntax.py
