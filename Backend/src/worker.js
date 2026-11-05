@@ -88,7 +88,8 @@ const nextDestination = (state, previous = -1) => {
   if (!candidates.length) candidates = state.board.nodes.filter(n => n.kind !== 0 && n.id !== previous);
   if (!candidates.length) return;
   state.destination = candidates[pick(candidates.length)].id;
-  state.ghostSeat = state.players.map((p,i) => i)
+  // The poor ghost only appears once someone first reaches a destination.
+  state.ghostSeat = state.reachedGoals === 0 ? -1 : state.players.map((p,i) => i)
     .sort((a,b) => distance(state.board,state.players[b].nodeId,state.destination) -
                     distance(state.board,state.players[a].nodeId,state.destination))[0];
 };

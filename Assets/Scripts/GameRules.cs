@@ -141,7 +141,8 @@ namespace RailTrip3D
             if (options.Count == 0) options = s.board.nodes.Where(n => n.kind != TileKind.Rail && n.id != previous).ToList();
             if (options.Count == 0) return;
             s.destination = options[UnityEngine.Random.Range(0, options.Count)].id;
-            s.ghostSeat = Enumerable.Range(0, s.players.Count)
+            // The ghost appears after the first goal, never unfairly on turn one.
+            s.ghostSeat = s.reachedGoals == 0 ? -1 : Enumerable.Range(0, s.players.Count)
                 .OrderByDescending(i => g.Distance(s.players[i].nodeId, s.destination)).First();
         }
     }
